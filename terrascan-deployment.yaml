@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: terra-controller-webhook
+  labels:
+    app: terrascan-admission-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: terrascan-admission-webhook
+  template:
+    metadata:
+      labels:
+        app: terrascan-admission-webhook
+    spec:
+      containers:
+      - name: terrascan-1-5
+        image: accurics/terrascan:4c66c22
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+          - containerPort: 443
+        livenessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          httpGet:
+            path: /health
+            port: 443
+            scheme: HTTPS
+        env:
+          - name: K8S_WEBHOOK_API_KEY
+            value: yoursecretapikey
+        volumeMounts:
+          - mountPath: /data
+            name: certspath  
+        args:  ["server", "--cert-path", "/data/server.crt", "--key-path", "/data/server.key", "-p", "443", "-l", "debug"]
+      volumes:
+        - name: certspath
+          hostPath:
+            path: path_till_repo/certs
+          
