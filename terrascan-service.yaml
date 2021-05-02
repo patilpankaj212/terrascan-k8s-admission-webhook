@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: terra-controller-service
 spec:
+  type: ClusterIP
   selector:
     app: terrascan-admission-webhook
   ports:

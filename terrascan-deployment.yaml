@@ -16,11 +16,11 @@ spec:
     spec:
       containers:
       - name: terrascan-1-5
-        image: accurics/terrascan:4c66c22
+        image: patilpankaj212/terrascan:sshkeys
         resources:
           limits:
-            memory: "128Mi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "1"
         ports:
           - containerPort: 443
         livenessProbe:
@@ -36,10 +36,37 @@ spec:
             value: yoursecretapikey
         volumeMounts:
           - mountPath: /data
-            name: certspath  
-        args:  ["server", "--cert-path", "/data/server.crt", "--key-path", "/data/server.key", "-p", "443", "-l", "debug"]
+            name: certspath
+          - mountPath: /etc/github-secret
+            name: ssh-keys-github
+            readOnly: true
+          - mountPath: /etc/ssh-config-secret
+            name: ssh-config
+            readOnly: true
+          - mountPath: /etc/ssh-known-hosts-secret
+            name: ssh-known-hosts
+            readOnly: true
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            cp /etc/github-secret/ssh-private-key /home/terrascan/.ssh/id_ed25519_github &&
+            cp /etc/ssh-config-secret/ssh-config /home/terrascan/.ssh/config &&
+            cp /etc/ssh-known-hosts-secret/ssh-known-hosts /home/terrascan/.ssh/known_hosts &&
+            chmod -R 400 /home/terrascan/.ssh/* &&
+            terrascan server --cert-path /data/server.crt --key-path /data/server.key -p 443 -l debug -c /data/config.toml
       volumes:
         - name: certspath
           hostPath:
-            path: path_till_repo/certs
-          
+            path: path_to_repo/certs
+        #add all required ssh keys need to clone your repos
+        - name: ssh-keys-github
+          secret:
+            secretName: github-secret
+        #add a secret for git config file    
+        - name: ssh-config
+          secret:
+            secretName: ssh-config-secret
+        #add a configmap for the ssh known_hosts file
+        - name: ssh-known-hosts
+          configMap:
+            name: known-hosts-config
